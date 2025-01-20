@@ -3,64 +3,63 @@
 import { useState, useEffect } from "react"
 import { TaskCard } from "@/src/components/TaskCard"
 import { EmptyState } from "@/src/components/EmptyState"
+import axios from "axios";
 
-interface Task {
-  id: number
-  title: string
-  completed: boolean
-  color: string
-}
 
-interface TodoListProps {
-  onTasksChange: (tasks: Task[]) => void
-}
+export function TodoList() {
+  
+  type Task = {
+    id: number;
+    title: string;
+    completed: boolean;
+    color: string;
+  };
 
-export function TodoList({ onTasksChange }: TodoListProps) {
-  const [tasks, setTasks] = useState<Task[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-
-  useEffect(() => {
-    fetchTasks()
-  }, [])
-
+  const [tasks, setTasks] = useState<Task[]>([]);
+// Fetch tasks from API on component mount
+useEffect(() => {
   const fetchTasks = async () => {
-    setIsLoading(true)
     try {
-      const response = await fetch("/api/tasks")
-      const data: Task[] = await response.json()
-      setTasks(data)
-      onTasksChange(data)
+      const response = await axios.get("http://localhost:3001/tasks");
+      setTasks(response.data);
     } catch (error) {
-      console.error("Failed to fetch tasks:", error)
+      console.error("Error fetching tasks:", error);
     } finally {
-      setIsLoading(false)
+      //setIsLoading(false);
     }
-  }
+  };
 
-  const handleToggle = async (id: number) => {
-    const response = await fetch(`/api/tasks/${id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ completed: !tasks.find((t) => t.id === id)?.completed }),
-    })
-    if (response.ok) {
-      const updatedTasks = tasks.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t))
-      setTasks(updatedTasks)
-      onTasksChange(updatedTasks)
+  fetchTasks();
+}, [tasks]);
+
+//
+const handleToggle = async (id: number) => {
+  const taskToToggle = tasks.find((task) => task.id === id);
+  if (!taskToToggle) return;
+
+  try {
+    const response = await axios.put(`http://localhost:3001/tasks/${id}`, {
+      ...taskToToggle,
+      completed: !taskToToggle.completed,
+    });
+    if (response.status === 200) {
+      setTasks(tasks.map((task) => (task.id === id ? response.data : task)));
     }
+  } catch (error) {
+    console.error("Error toggling task:", error);
   }
+};
 
   const handleDelete = async (id: number) => {
-    const response = await fetch(`/api/tasks/${id}`, { method: "DELETE" })
-    if (response.ok) {
-      const updatedTasks = tasks.filter((task) => task.id !== id)
-      setTasks(updatedTasks)
-      onTasksChange(updatedTasks)
+    ////setTasks(tasks.filter((task) => task.id !== id))
+    try {
+      const response = await axios.delete(`http://localhost:3001/tasks/${id}`);
+      if (response.status === 200) {
+        setTasks(tasks.filter((task) => task.id !== id));
+      }
+    } catch (error) {
+      console.error("Error deleting task:", error);
     }
-  }
-
-  if (isLoading) {
-    return <div>Loading tasks...</div>
   }
 
   if (tasks.length === 0) {
@@ -70,7 +69,15 @@ export function TodoList({ onTasksChange }: TodoListProps) {
   return (
     <div className="space-y-3">
       {tasks.map((task) => (
-        <TaskCard key={task.id} task={task} onToggle={handleToggle} onDelete={handleDelete} />
+        <TaskCard
+          key={task.id}
+          task={task}
+          onToggle={handleToggle}
+          // onToggle={(id) => {
+          //   setTasks(tasks.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t)))
+          // }}
+          onDelete={handleDelete}
+        />
       ))}
     </div>
   )
