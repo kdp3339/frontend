@@ -4,7 +4,6 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { ArrowLeft, Plus, Check } from "lucide-react"
 import Link from "next/link"
-import axios from "axios";
 
 const colorOptions = [
   { id: 1, color: "bg-red-500" },
@@ -30,27 +29,20 @@ export default function CreateTask() {
     setIsSubmitting(true)
 
     try {
-       // Make the POST API call
-       const response = await axios.post("http://localhost:3001/tasks", {
-        title,
-        color: selectedColor,
-        completed: false, // Default value for new tasks
-      });
-
-      if (response.status === 201) { // Assuming successful creation returns 201
-        setIsSuccess(true);
-        // Wait for a moment to show success state before redirecting
-        await new Promise((resolve) => setTimeout(resolve, 500));
-        router.push("/");
+      const response = await fetch("/api/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, color: selectedColor }),
+      })
+      if (response.ok) {
+        setIsSuccess(true)
+        setTimeout(() => router.push("/"), 500)
       } else {
-        throw new Error("Failed to create task");
+        throw new Error("Failed to create task")
       }
-      // Simulate API call   
-      // await new Promise((resolve) => setTimeout(resolve, 1000))
-      // setIsSuccess(true)
-      // await new Promise((resolve) => setTimeout(resolve, 500))
-      // router.push("/")
     } catch (error) {
+      console.error("Error creating task:", error)
+    } finally {
       setIsSubmitting(false)
     }
   }
